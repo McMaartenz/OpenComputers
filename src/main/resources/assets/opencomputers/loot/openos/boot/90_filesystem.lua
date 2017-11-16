@@ -47,6 +47,9 @@ event.listen("init", function()
     xpcall(shell.execute, event.onError, table.unpack(run))
   end
   pendingAutoruns = nil
+  if fs.get("/home").isReadOnly() then
+    fs.mount(tmp, "/home")
+  end
   return false
 end)
 
