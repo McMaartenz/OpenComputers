@@ -43,29 +43,22 @@ local function onComponentRemoved(_, address, componentType)
 end
 
 event.listen("init", function()
+  cprint("init", #pendingAutoruns)
+  local home, pref = not fs.get("/home").isReadOnly()
   for _, run in ipairs(pendingAutoruns) do
     xpcall(shell.execute, event.onError, table.unpack(run))
-  end
-  -- if / is ro, and there is a rw drive available, mount --bind its home to /home
-  local pref, home
-  if fs.get("/home").isReadOnly() then
-    for proxy, path in fs.mounts() do
-      if not proxy.isReadOnly() and proxy.address ~= tmp and proxy.type == "filesystem" then
-        local new_home = proxy.exists("home")
-        if not home then
-          if new_home or not pref or #pref > #path then
-            pref = path
-            home = new_home
-          end
-        end
+    cprint("run: ", tostring(run[1]))
+    if not run[3].isReadOnly() and not home then
+      cprint("rw disk and no home")
+      local new_home = run[3].exists("home")
+      if new_home or not pref then
+        pref = fs.concat(fs.path(run[1]), "home")
+        home = new_home
       end
     end
   end
   if pref then
-    pref = fs.concat(pref, "home")
-    if not fs.exists(pref) then
-      fs.makeDirectory(pref)
-    end
+    fs.makeDirectory(pref)
     fs.mount(fs.proxy(pref, {bind=true}), "/home")
   end
   pendingAutoruns = nil
