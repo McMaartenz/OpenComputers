@@ -46,6 +46,28 @@ event.listen("init", function()
   for _, run in ipairs(pendingAutoruns) do
     xpcall(shell.execute, event.onError, table.unpack(run))
   end
+  -- if / is ro, and there is a rw drive available, mount --bind its home to /home
+  local pref, home
+  if fs.get("/home").isReadOnly() then
+    for proxy, path in fs.mounts() do
+      if not proxy.isReadOnly() and proxy.address ~= tmp and proxy.type == "filesystem" then
+        local new_home = proxy.exists("home")
+        if not home then
+          if new_home or not pref or #pref > #path then
+            pref = path
+            home = new_home
+          end
+        end
+      end
+    end
+  end
+  if pref then
+    pref = fs.concat(pref, "home")
+    if not fs.exists(pref) then
+      fs.makeDirectory(pref)
+    end
+    fs.mount(fs.proxy(pref, {bind=true}), "/home")
+  end
   pendingAutoruns = nil
   return false
 end)
