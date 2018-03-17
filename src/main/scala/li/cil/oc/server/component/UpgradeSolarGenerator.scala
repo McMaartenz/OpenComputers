@@ -26,14 +26,14 @@ class UpgradeSolarGenerator(val host: EnvironmentHost) extends prefab.ManagedEnv
 
   var isSunShining = false
 
-  private final lazy val deviceInfo = Map(
+  override def getDeviceInfo: util.Map[String, String] = {Map[String, String](
     DeviceAttribute.Class -> DeviceClass.Power,
     DeviceAttribute.Description -> "Solar panel",
     DeviceAttribute.Vendor -> Constants.DeviceInfo.DefaultVendor,
-    DeviceAttribute.Product -> "Enligh10"
-  )
-
-  override def getDeviceInfo: util.Map[String, String] = deviceInfo
+    DeviceAttribute.Product -> "Enligh10",
+    DeviceAttribute.Detector -> (if (canSeeSky()) "1" else "0"),
+    DeviceAttribute.Charging -> (if (isSunShining) "1" else "0")
+  )}
 
   // ----------------------------------------------------------------------- //
 
@@ -52,11 +52,15 @@ class UpgradeSolarGenerator(val host: EnvironmentHost) extends prefab.ManagedEnv
     }
   }
 
+  private def canSeeSky(): Boolean = {
+    val blockPos = BlockPosition(host).offset(ForgeDirection.UP)
+    (!host.world.provider.hasNoSky) && host.world.canBlockSeeTheSky(blockPos.x, blockPos.y, blockPos.z)
+  }
+
   private def isSunVisible = {
     val blockPos = BlockPosition(host).offset(ForgeDirection.UP)
     host.world.isDaytime &&
-      (!host.world.provider.hasNoSky) &&
-      host.world.canBlockSeeTheSky(blockPos.x, blockPos.y, blockPos.z) &&
+      canSeeSky() &&
       (host.world.getWorldChunkManager.getBiomeGenAt(blockPos.x, blockPos.z).isInstanceOf[BiomeGenDesert] || (!host.world.isRaining && !host.world.isThundering))
   }
 }

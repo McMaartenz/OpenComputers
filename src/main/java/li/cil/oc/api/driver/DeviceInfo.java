@@ -70,6 +70,10 @@ public interface DeviceInfo {
         public static final String Clock = "clock"; // bus clock (in Hz) of the device, e.g. call speed(s) of a component
         public static final String Width = "width"; // address width of the device, in the broadest sense
 
+        public static final String Detector = "detector"; // standard detector with upgrades (has fuel, can see sky)
+        public static final String Charging = "charging"; // 1 if device is charging, 0 if not
+
+
         private DeviceAttribute() {
         }
     }

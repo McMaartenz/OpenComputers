@@ -3,8 +3,7 @@ package li.cil.oc.server.component
 import java.util
 
 import li.cil.oc.Constants
-import li.cil.oc.api.driver.DeviceInfo.DeviceAttribute
-import li.cil.oc.api.driver.DeviceInfo.DeviceClass
+import li.cil.oc.api.driver.DeviceInfo.{DeviceAttribute, DeviceClass}
 import li.cil.oc.Settings
 import li.cil.oc.api.Network
 import li.cil.oc.api.driver.DeviceInfo
@@ -38,7 +37,9 @@ class UpgradeGenerator(val host: EnvironmentHost with internal.Agent) extends pr
     DeviceAttribute.Description -> "Generator",
     DeviceAttribute.Vendor -> Constants.DeviceInfo.DefaultVendor,
     DeviceAttribute.Product -> "Portagen 2.0 (Rev. 3)",
-    DeviceAttribute.Capacity -> "1"
+    DeviceAttribute.Capacity -> "1",
+    DeviceAttribute.Detector -> (if (count() > 0) "1" else "0"),
+    DeviceAttribute.Charging -> (if (remainingTicks > 0) "1" else "0")
   )
 
   override def getDeviceInfo: util.Map[String, String] = deviceInfo
@@ -74,13 +75,14 @@ class UpgradeGenerator(val host: EnvironmentHost with internal.Agent) extends pr
     result(true)
   }
 
-  @Callback(doc = """function():number -- Get the size of the item stack in the generator's queue.""")
-  def count(context: Context, args: Arguments): Array[AnyRef] = {
+  private def count(): Int =
     inventory match {
-      case Some(stack) => result(stack.stackSize)
-      case _ => result(0)
+      case Some(stack) => stack.stackSize
+      case _ => 0
     }
-  }
+
+  @Callback(doc = """function():number -- Get the size of the item stack in the generator's queue.""")
+  def count(context: Context, args: Arguments): Array[AnyRef] = result(count())
 
   @Callback(doc = """function([count:number]):boolean -- Tries to remove items from the generator's queue.""")
   def remove(context: Context, args: Arguments): Array[AnyRef] = {
