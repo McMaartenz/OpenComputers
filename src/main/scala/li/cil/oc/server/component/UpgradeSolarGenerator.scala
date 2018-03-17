@@ -8,6 +8,9 @@ import li.cil.oc.api.driver.DeviceInfo.DeviceClass
 import li.cil.oc.Settings
 import li.cil.oc.api.Network
 import li.cil.oc.api.driver.DeviceInfo
+import li.cil.oc.api.machine.Arguments
+import li.cil.oc.api.machine.Callback
+import li.cil.oc.api.machine.Context
 import li.cil.oc.api.network.EnvironmentHost
 import li.cil.oc.api.network.Visibility
 import li.cil.oc.api.prefab
@@ -19,6 +22,7 @@ import scala.collection.convert.WrapAsJava._
 
 class UpgradeSolarGenerator(val host: EnvironmentHost) extends prefab.ManagedEnvironment with DeviceInfo {
   override val node = Network.newNode(this, Visibility.Network).
+    withComponent("solar", Visibility.Neighbors).
     withConnector().
     create()
 
@@ -52,11 +56,25 @@ class UpgradeSolarGenerator(val host: EnvironmentHost) extends prefab.ManagedEnv
     }
   }
 
+  private def canSeeSky(): Boolean = {
+    val blockPos = BlockPosition(host).offset(ForgeDirection.UP)
+    (!host.world.provider.hasNoSky) && host.world.canBlockSeeTheSky(blockPos.x, blockPos.y, blockPos.z)
+  }
+
   private def isSunVisible = {
     val blockPos = BlockPosition(host).offset(ForgeDirection.UP)
     host.world.isDaytime &&
-      (!host.world.provider.hasNoSky) &&
-      host.world.canBlockSeeTheSky(blockPos.x, blockPos.y, blockPos.z) &&
+      canSeeSky() &&
       (host.world.getWorldChunkManager.getBiomeGenAt(blockPos.x, blockPos.z).isInstanceOf[BiomeGenDesert] || (!host.world.isRaining && !host.world.isThundering))
+  }
+
+  @Callback(doc = """function():boolean -- Returns whether the solar panels have a clear line of sight to the sky.""")
+  def canSeeSky(context: Context, args: Arguments): Array[AnyRef] = {
+    result(canSeeSky())
+  }
+
+  @Callback(doc = """function():boolean -- Returns whether the machine is charging.""")
+  def isCharging(context: Context, args: Arguments): Array[AnyRef] = {
+    result(isSunShining)
   }
 }
