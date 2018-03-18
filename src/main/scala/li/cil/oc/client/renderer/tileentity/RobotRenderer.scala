@@ -302,6 +302,60 @@ object RobotRenderer extends TileEntitySpecialRenderer {
       GL11.glTranslated(dx * remaining, dy * remaining, dz * remaining)
     }
 
+    {
+      GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
+      GL11.glDepthMask(false)
+      GL11.glEnable(GL11.GL_BLEND)
+      GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
+      GL11.glLineWidth(2.0F)
+      GL11.glColor3f(1f, 0f, 0f)
+
+      val tessellator = Tessellator.instance
+
+      tessellator.startDrawing(GL11.GL_LINE_STRIP)
+      tessellator.addVertex(-1f, -1f, 0f)
+      tessellator.addVertex(-1f,  1f, 0f)
+      tessellator.addVertex( 1f,  1f, 0f)
+      tessellator.addVertex( 1f, -1f, 0f)
+      tessellator.addVertex(-1f, -1f, 0f)
+
+      tessellator.addVertex( 0f,  0f, .5f)
+      tessellator.addVertex(-1f,  1f,  0f)
+      tessellator.addVertex( 0f,  0f, .5f)
+      tessellator.addVertex( 1f,  1f,  0f)
+      tessellator.addVertex( 0f,  0f, .5f)
+      tessellator.addVertex( 1f, -1f,  0f)
+      tessellator.addVertex( 0f,  0f, .5f)
+
+      GL11.glLineWidth(4.0F)
+      val r = 0.49
+
+      //SOUTH
+      tessellator.addVertex( 0f,  0f, 1.01f)
+      tessellator.addVertex( 0f,  0f, 1.01f + r)
+
+      //DOWN
+      tessellator.addVertex( 0f,  0f, 1.01f)
+      tessellator.addVertex( 0f,  0f - r, 1.01f)
+
+      //UP
+      tessellator.addVertex( 0f,  0f, 1.01f)
+      tessellator.addVertex( 0f,  0f + r, 1.01f)
+
+      //WEST
+      tessellator.addVertex( 0f,  0f, 1.01f)
+      tessellator.addVertex( 0f - r,  0f, 1.01f)
+
+      //EAST
+      tessellator.addVertex( 0f,  0f, 1.01f)
+      tessellator.addVertex( 0f + r,  0f, 1.01f)
+
+      tessellator.draw()
+
+      GL11.glDepthMask(true)
+      GL11.glPopAttrib()
+    }
+
     val timeJitter = robot.hashCode ^ 0xFF
     val hover =
       if (robot.isRunning) (Math.sin(timeJitter + worldTime / 20.0) * 0.03).toFloat
@@ -504,7 +558,8 @@ object RobotRenderer extends TileEntitySpecialRenderer {
       t.addVertex(-halfWidth - 1, 8, 0)
       t.addVertex(halfWidth + 1, 8, 0)
       t.addVertex(halfWidth + 1, -1, 0)
-      t.draw
+
+      t.draw()
 
       GL11.glEnable(GL11.GL_TEXTURE_2D) // For the font.
       f.drawString((if (EventHandler.isItTime) EnumChatFormatting.OBFUSCATED.toString else "") + name, -halfWidth, 0, 0xFFFFFFFF)
