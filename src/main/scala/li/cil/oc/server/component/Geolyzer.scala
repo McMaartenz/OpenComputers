@@ -19,6 +19,9 @@ import li.cil.oc.api.network.Message
 import li.cil.oc.api.network.Visibility
 import li.cil.oc.api.prefab
 import li.cil.oc.api.prefab.AbstractManagedEnvironment
+import li.cil.oc.common.tileentity.{Robot => EntityRobot, Microcontroller}
+import li.cil.oc.common.entity.{Drone => EntityDrone}
+import li.cil.oc.common.item.TabletWrapper
 import li.cil.oc.util.BlockPosition
 import li.cil.oc.util.DatabaseAccess
 import li.cil.oc.util.ExtendedArguments._
@@ -28,13 +31,14 @@ import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.EnumFacing
+import net.minecraft.world.biome.BiomeGenDesert
 import net.minecraftforge.common.MinecraftForge
 
 import scala.collection.convert.WrapAsJava._
 import scala.collection.convert.WrapAsScala._
 import scala.language.existentials
 
-class Geolyzer(val host: EnvironmentHost) extends AbstractManagedEnvironment with DeviceInfo {
+class Geolyzer(val host: EnvironmentHost) extends AbstractManagedEnvironment with traits.WorldControl with DeviceInfo {
   override val node = api.Network.newNode(this, Visibility.Network).
     withComponent("geolyzer").
     withConnector().
@@ -51,6 +55,45 @@ class Geolyzer(val host: EnvironmentHost) extends AbstractManagedEnvironment wit
   override def getDeviceInfo: util.Map[String, String] = deviceInfo
 
   // ----------------------------------------------------------------------- //
+
+  override protected def checkSideForAction(args: Arguments, n: Int): ForgeDirection = {
+    val side = args.checkSideAny(n)
+    val is_uc = host.isInstanceOf[Microcontroller]
+    host match {
+      case robot: EntityRobot => robot.proxy.toGlobal(side)
+      case drone: EntityDrone => drone.toGlobal(side)
+      case uc: Microcontroller => uc.toLocal(side) // not really sure what it is reversed for microcontrollers
+      case tablet: TabletWrapper => tablet.toGlobal(side)
+      case _ => side
+    }
+  }
+
+  override def position: BlockPosition = host match {
+    case robot: EntityRobot => robot.proxy.position
+    case drone: EntityDrone => BlockPosition(drone.posX, drone.posY, drone.posZ, drone.world)
+    case uc: Microcontroller => uc.position
+    case tablet: TabletWrapper => BlockPosition(tablet.xPosition, tablet.yPosition, tablet.zPosition, tablet.world)
+    case _ => BlockPosition(host)
+  }
+
+  private def canSeeSky: Boolean = {
+    val blockPos = position.offset(ForgeDirection.UP)
+    !host.world.provider.hasNoSky && host.world.canBlockSeeTheSky(blockPos.x, blockPos.y, blockPos.z)
+  }
+
+  @Callback(doc = """function():boolean -- Returns whether there is a clear line of sight to the sky directly above.""")
+  def canSeeSky(computer: Context, args: Arguments): Array[AnyRef] = {
+    result(canSeeSky)
+  }
+
+  @Callback(doc = """function():boolean -- Return whether the sun is currently visible directly above.""")
+  def isSunVisible(computer: Context, args: Arguments): Array[AnyRef] = {
+    val blockPos = BlockPosition(host).offset(ForgeDirection.UP)
+    result(
+      host.world.isDaytime &&
+      canSeeSky &&
+      (host.world.getWorldChunkManager.getBiomeGenAt(blockPos.x, blockPos.z).isInstanceOf[BiomeGenDesert] || (!host.world.isRaining && !host.world.isThundering)))
+  }
 
   @Callback(doc = """function(x:number, z:number[, y:number, w:number, d:number, h:number][, ignoreReplaceable:boolean|options:table]):table -- Analyzes the density of the column at the specified relative coordinates.""")
   def scan(computer: Context, args: Arguments): Array[AnyRef] = {
