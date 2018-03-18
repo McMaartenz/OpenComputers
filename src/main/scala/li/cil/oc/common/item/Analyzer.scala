@@ -10,6 +10,7 @@ import li.cil.oc.api.network.Analyzable
 import li.cil.oc.api.network._
 import li.cil.oc.common.tileentity
 import li.cil.oc.server.PacketSender
+import li.cil.oc.server.agent.{Player => RobotPlayer}
 import li.cil.oc.util.BlockPosition
 import li.cil.oc.util.ExtendedWorld._
 import net.minecraft.entity.player.EntityPlayer
@@ -60,6 +61,14 @@ object Analyzer {
 
   private def analyzeNodes(nodes: Array[Node], player: EntityPlayer) = if (nodes != null) for (node <- nodes if node != null) {
     player match {
+      case robotPlayer: RobotPlayer => {
+        //robotPlayer.addChatMessage(Localization.Chat.WarningLink("test message"))
+        node match {
+          case machine: Machine => {
+            machine.signal("analyzer", true)
+          }
+        }
+      }
       case _: FakePlayer => // Nope
       case playerMP: EntityPlayerMP =>
         if (node != null) node.host match {
